@@ -1781,7 +1781,7 @@ character(len=sklen)       :: errmsg
 real(kind=skr),dimension(3)  :: XDUM, YDUM
 real(kind=skr),dimension(3)  :: DIREC,AP_VEC,E_TEMP,SB_POS
 real(kind=skr),dimension(3)  :: VTEMP,A_VEC,A_TEMP, E_BEAM
-real(kind=skr), dimension(6,NPOINT1) :: grid
+real(kind=skr),dimension(:,:),allocatable  :: grid
 real(kind=skr),dimension(10)  :: SIGXL,SIGZL
     
 ! insertion device arrays
@@ -1814,7 +1814,7 @@ real(kind=skr)    :: correc, curv, cxmax, czmax, deltai, deltaj, deltak, denom, 
 real(kind=skr)    :: dk, epsi_path, epsi_wx, epsi_wz, epsi_xold, epsi_zold, eseed
 integer(kind=ski) :: i,i0,i1,i_change,iangle,idumm,iflag,index,indexmom,indexspa,istat,itest
 integer(kind=ski) :: itik, itmp, itotray, j, jnow, k, ki, kk, mm, n_test, ne, nmom
-integer(kind=ski) :: np_sy, np_traj, krej, nrej, nspace, nt, ntotal
+integer(kind=ski) :: np_sy, np_traj, krej, nrej, nspace, nt, ntotal,ierr
 
 real(kind=skr)    :: path0, path_step, phasex, phasez, phi, penergy, phi1, phi2, phi_x, phi_z
 real(kind=skr)    :: phir, phot_ch, q_wave, rad_max, rad_min, radius, rhox, rhoz 
@@ -1825,6 +1825,11 @@ real(kind=skr)    :: x_traj, xin, xmax1, xmax2, xrand, xseed, y_traj, y_traj_old
 real(kind=skr)    :: z_traj, zin, zmax1, zmax2, zrand, zseed
 
 ! load gfile (moved from gen_source)
+
+allocate(grid(6,npoint1),stat=ierr)
+IF (ierr /= 0) THEN
+    print *,"SOURCESYNC: Error allocating GRID" ; STOP __LINE__
+END IF    
     
 n_rej=0
 k_rej=0
@@ -1867,7 +1872,7 @@ IF (F_WIGGLER.EQ.1) THEN
     !OPEN (29, FILE=FILE_TRAJ, STATUS='OLD', FORM='UNFORMATTED')
 
     use_wiggler_binary_files = 0
-    OPEN (29, FILE=FILE_TRAJ, STATUS='OLD', FORM='FORMATTED')
+    OPEN (29, FILE=GfConvertStringArrToString(FILE_TRAJ), STATUS='OLD', FORM='FORMATTED')
     READ (29,*,err=898) NP_TRAJ,PATH_STEP,BENER,RAD_MIN,RAD_MAX,PH1,PH2
 
 go to 899
@@ -1875,7 +1880,7 @@ go to 899
 898  continue
     ! try binary file
     close(29)
-    OPEN (29, FILE=FILE_TRAJ, STATUS='OLD', FORM='UNFORMATTED')
+    OPEN (29, FILE=GfConvertStringArrToString(FILE_TRAJ), STATUS='OLD', FORM='UNFORMATTED')
     READ (29) NP_TRAJ,PATH_STEP,BENER,RAD_MIN,RAD_MAX,PH1,PH2
     use_wiggler_binary_files = 1
 
@@ -1985,7 +1990,7 @@ ELSE IF (F_WIGGLER.EQ.3) THEN
     ! C
     ! C Elliptical wiggler case:
     ! C
-    OPEN (29, FILE=FILE_TRAJ, STATUS='OLD', FORM='UNFORMATTED')
+    OPEN (29, FILE=GfConvertStringArrToString(FILE_TRAJ), STATUS='OLD', FORM='UNFORMATTED')
     READ (29) NP_TRAJ,PATH_STEP,BENER,RAD_MIN,RAD_MAX,PH1,PH2
  
     !array allocation
@@ -2100,13 +2105,13 @@ ELSE IF (F_WIGGLER.EQ.2) THEN
 
     use_undulator_binary_files = 0
 
-    OPEN(30, FILE=FILE_TRAJ, STATUS='OLD',FORM='FORMATTED')
+    OPEN(30, FILE=GfConvertStringArrToString(FILE_TRAJ), STATUS='OLD',FORM='FORMATTED')
     READ(30,*,err=1313) NE,NT,NP,IANGLE
     GO TO 1414
 
     1313 continue
     close(30)
-    OPEN(30, FILE=FILE_TRAJ, STATUS='OLD',FORM='UNFORMATTED')
+    OPEN(30, FILE=GfConvertStringArrToString(FILE_TRAJ), STATUS='OLD',FORM='UNFORMATTED')
     READ(30) NE,NT,NP,IANGLE
     use_undulator_binary_files = 1
 
@@ -3292,7 +3297,8 @@ DO 10000 ITIK=1,NTOTAL  !start mega-loop on number of rays
 
           if ( (ntotalpoint.gt.0) .and. (n_rej.ge.ntotalpoint)) then
             PRINT *,'sourceSync: too many rejected rays: ',ntotalpoint
-            PRINT *,'sourceSync:    check inputs (NTOTALPOINT) and/or file: '//trim(file_bound)
+            PRINT *,'sourceSync:    check inputs (NTOTALPOINT) and/or file: '//&
+                    trim(GfConvertStringArrToString(file_bound))
             PRINT *,'sourceSync:    Exit'
             npoint = itik - 1 ! the current index is a bad ray
             ! exit
@@ -3359,6 +3365,8 @@ if (allocated( cdfz )) deallocate( cdfz )
 if (allocated( utheta )) deallocate( utheta )
 if (allocated( cdfw )) deallocate( cdfw )
 if (allocated( uener )) deallocate( uener )
+
+deallocate(grid,stat=ierr)
 
 WRITE(6,*)'Exit from SOURCE'
 RETURN
@@ -3701,7 +3709,7 @@ implicit none
   
 character(len=1024)    ::  mode
 character(len=1024)    ::  bgnfile,inFile
-integer (kind=ski)     ::  iSynchrotron=0,iErr
+integer (kind=ski)     ::  iSynchrotron=0,iErr,NMOM,NSPACE,NTOTAL
 
 type (poolSource)      ::  pool00
 real(kind=skr), allocatable, dimension(:,:) :: ray
@@ -3736,12 +3744,40 @@ SELECT CASE (mode)
       RETURN
 END SELECT
 
+! Calculate total points for GRID source
+NTOTAL = pool00%NPOINT   
+if (pool00%FGRID /= 0 ) Then 
+    IF (pool00%FDISTR.NE.5) THEN
+       NMOM = pool00%IDO_VX * pool00%IDO_VZ
+    ELSE
+       NMOM = (pool00%N_CONE * pool00%N_CIRCLE) 
+       pool00%IDO_VX = pool00%N_CIRCLE
+       pool00%IDO_VZ = pool00%N_CONE
+    END IF
+    NSPACE = pool00%IDO_X_S * pool00%IDO_Y_S * pool00%IDO_Z_S
+    
+    IF (pool00%FGRID.EQ.0) THEN
+       NTOTAL = pool00%NPOINT
+    ELSE IF (pool00%FGRID.EQ.1) THEN
+       NTOTAL = NSPACE * NMOM
+    ELSE IF (pool00%FGRID.EQ.2) THEN
+       NTOTAL = NSPACE * pool00%NPOINT
+    ELSE IF (pool00%FGRID.EQ.3) THEN
+       NTOTAL = pool00%NPOINT * NMOM
+    ELSE IF (pool00%FGRID.EQ.4) THEN
+       NTOTAL = pool00%IDO_XL * pool00%NPOINT * pool00%IDO_ZL * pool00%NPOINT
+    ELSE IF (pool00%FGRID.EQ.5) THEN
+       NTOTAL = pool00%IDO_XL * pool00%IDO_XN * pool00%IDO_ZL * pool00%IDO_ZN
+    END IF
+!    pool00%NPOINT = NTOTAL
+END IF
 !
 ! allocate ray 
 !
 !print *,'Allocating array with pool00%npoint: ',pool00%npoint
   IF (allocated(ray)) deallocate(ray)
-  ALLOCATE( ray(18,pool00%npoint) )
+!  ALLOCATE( ray(18,pool00%npoint) )
+  ALLOCATE( ray(18,NTOTAL) )
   ray=0.0d0
 !
 !  
@@ -3763,7 +3799,7 @@ END SELECT
     ! a separated synchrotron module. 
     ! Therefore, users that do not want synchrotron, they just comment 
     ! the "USE shadow_sourcesync" and "CALL SourceSync"
-    CALL  sourceGeom(pool00, ray,pool00%npoint)
+    CALL  sourceGeom(pool00, ray,NTOTAL)   !pool00%npoint -> NTOTAL
   ENDIF 
   
   ! write file begin.dat

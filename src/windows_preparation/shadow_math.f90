@@ -454,7 +454,7 @@ end function mysqrt
         real(kind=skr),dimension(3),intent(out)  :: vres
      
         integer(KIND=SKI)     :: m_flag
-        character(len=sklen)  :: m_warning
+        character(len=skrlen)  :: m_warning
         real(kind=skr)        :: ttest
         !DIMENSION   V1(3),V2(3),VRES (3)
 

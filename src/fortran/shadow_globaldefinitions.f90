@@ -59,9 +59,9 @@ module shadow_globaldefinitions
     real(kind=skr),parameter :: codata_electric_permittivity = 8.854187817D-12   ! electric constant epsilon0
     ! conversion Angstrom <-> eV for particles with no mass
     ! codata_h*codata_c/codata_e*1d10
-    real(kind=skr), parameter :: toangs = 12398.419739640718D0    ! 12398.4192920042
+    real(kind=skr), parameter :: toangs = 12398.419843320025D0  !12398.419739640718D0    ! 12398.4192920042
 
-    real(kind=skr), parameter :: tocm =   12398.419739640718D-8 ! 12398.4192920042D-8
+    real(kind=skr), parameter :: tocm =   12398.419843320025D-8  !12398.419739640718D-8 ! 12398.4192920042D-8
 
 
 
@@ -72,5 +72,8 @@ module shadow_globaldefinitions
     !  using m: user_units_to_cm=100, using cm: user_units_to_cm=1, usning mm: user_units_to_cm=0.1
     !  default is cm
     real(kind=skr), public :: user_units_to_cm = 1.0D0
+    
+    !polynomial mirror, max degree from 4 to MAX_NDEG
+    real(kind=ski), parameter :: MAX_NDEG  = 20
 
 end module shadow_globaldefinitions

@@ -76,7 +76,7 @@ endif
 #
 FC = gfortran
 FFLAGS = -I ./def/ -cpp -fPIC -ffree-line-length-none $(32BITS) $(STATIC) -O2 -fomit-frame-pointer $(COMPILEOPT)
-LINKFLAGS = $(32BITS) $(STATIC)
+LINKFLAGS = $(32BITS) #$(STATIC) 
 
 # NOTE:
 # For Ubuntu using g95, I must define
@@ -168,7 +168,7 @@ all: shadow3
 # shadow3 target ----------------
 #
 shadow3: $(OBJFMODULES) shadow3.o
-	$(FC) $(LINKFLAGS) -o ../shadow3$(EXE) shadow3.o $(OBJFMODULES) 
+	$(FC)  -o ../shadow3$(EXE) shadow3.o $(OBJFMODULES) $(LINKFLAGS) 
 	echo 'Note that binary is created in the root directory (./..) '
 
 shadow3.o: fortran/shadow3.f90

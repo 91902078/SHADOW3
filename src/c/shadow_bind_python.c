@@ -680,7 +680,7 @@ static PyObject* Beam_genSource ( Shadow_Beam* self, PyObject* args )
   Shadow_Source* pySrc = NULL;
   npy_intp dims[2];
   npy_intp strides[2];
-
+  int NMOM1,NSPACE1,NTOTAL1;
   if ( !PyArg_ParseTuple ( args, "O", &pySrc ) ) {
     PyErr_SetString ( PyExc_TypeError, "Error passing argument" );
     return NULL;
@@ -692,7 +692,34 @@ static PyObject* Beam_genSource ( Shadow_Beam* self, PyObject* args )
 
   strides[0] = 18*sizeof ( double ); 
   strides[1] = sizeof( double );
-  dims[0] = pySrc->pl.NPOINT; 
+// Calculate total points for GRID source 
+    NTOTAL1 = pySrc->pl.NPOINT;  
+    if (pySrc->pl.FGRID != 0 ) {
+        if (pySrc->pl.FDISTR != 5) 
+           NMOM1 = pySrc->pl.IDO_VX * pySrc->pl.IDO_VZ;
+        else{
+           NMOM1 = (pySrc->pl.N_CONE * pySrc->pl.N_CIRCLE) ;
+           pySrc->pl.IDO_VX = pySrc->pl.N_CIRCLE;
+           pySrc->pl.IDO_VZ = pySrc->pl.N_CONE;
+        }
+        NSPACE1 = pySrc->pl.IDO_X_S * pySrc->pl.IDO_Y_S * pySrc->pl.IDO_Z_S;
+    
+        if (pySrc->pl.FGRID == 0) 
+           NTOTAL1 = pySrc->pl.NPOINT;
+        else if (pySrc->pl.FGRID == 1) 
+           NTOTAL1 = NSPACE1 * NMOM1;
+        else if (pySrc->pl.FGRID==2) 
+           NTOTAL1 = NSPACE1 * pySrc->pl.NPOINT;
+        else if (pySrc->pl.FGRID==3)
+           NTOTAL1 = pySrc->pl.NPOINT * NMOM1;
+        else if (pySrc->pl.FGRID==4) 
+           NTOTAL1 = pySrc->pl.IDO_XL * pySrc->pl.NPOINT * pySrc->pl.IDO_ZL * pySrc->pl.NPOINT;
+        else if (pySrc->pl.FGRID==5) 
+           NTOTAL1 = pySrc->pl.IDO_XL * pySrc->pl.IDO_XN * pySrc->pl.IDO_ZL * pySrc->pl.IDO_ZN;
+        pySrc->pl.NPOINT = NTOTAL1;
+    }
+
+  dims[0] = NTOTAL1; //pySrc->pl.NPOINT -> NTOTAL1; 
   dims[1] = 18;
 
   if ( self->rays!=NULL )
@@ -746,7 +773,7 @@ static PyMethodDef Beam_methods[] = {
   {"genSource", ( PyCFunction ) Beam_genSource, METH_VARARGS, "generate rays from Source"},
   {"traceOE", ( PyCFunction ) Beam_traceOE, METH_VARARGS, "trace rays according to a given OE"},
   {"SetRayZeros", ( PyCFunction ) beam_SetRayZeros, METH_VARARGS, "set member rays to zeros"},
-  {NULL}                                             /* Sentinel          */
+  {NULL,NULL}                                             /* Sentinel          */
 };
 
 static PyTypeObject ShadowBeamType = {
@@ -1167,6 +1194,7 @@ static struct PyModuleDef shadowModule = {
 PyMODINIT_FUNC
 PyInit_ShadowLib( void ){
   PyObject* m;
+  //printf("shadow_bind_python.c: hello!");
   _import_array();//???
 
 //  Py_TYPE(ShadowSourceType) = PyType_Type;

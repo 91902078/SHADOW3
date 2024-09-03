@@ -97,7 +97,7 @@ contains
 
 	subroutine BindShadowSourceGeom(src, ray, nPoint) bind (C,name="BindShadowSourceGeom")
         type (poolSource), intent(inout)                    :: src
-        integer(kind=C_INT), intent(in)                       :: nPoint
+        integer(kind=C_INT), intent(in out)                       :: nPoint
         real(kind=C_DOUBLE), dimension(18,nPoint), intent(out)   :: ray
 
         call sourceGeom(src, ray, nPoint)

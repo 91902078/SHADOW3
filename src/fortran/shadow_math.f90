@@ -104,7 +104,7 @@ Contains
      !write(*,*) "WRAN: first: ",first
      !write(*,*) "WRAN: wran_counter: ",wran_counter
 
-         if (first.eq.1) then
+         if (first.eq.11) then     !1 to 11, skip call init again, already initiated
                 first = 0
                 CALL init_random_seed(iseed)
          end if
@@ -1865,16 +1865,16 @@ END FUNCTION RAND_PENELOPE
 ! C                                    SMALLER RANGE
 ! C                                  RADIX THE BASE OF THE FLOATING-POINT
 ! C                                    NUMBER SYSTEM USED
-                DATA               RINFP/1.7E+38/
-       DATA               REPSP/2.9388E-39/
+       DATA               RINFP/1.7D+38/       !1.7E+38
+       DATA               REPSP/2.9388D-39/     !2.9388E-39
        DATA               RADIX/2.0/
-       DATA               REPSR1/2.775557562D-17/
+       DATA               REPSR1/2.775557562D-17/   !2.775557562D-17
        DATA               ZERO/0.0D0/,ONE/1.0D0/
 ! C                                  ZRPOLY USES SINGLE PRECISION
 ! C                                    CALCULATIONS FOR SCALING, BOUNDS
 ! C                                    AND ERROR CALCULATIONS.
 ! C                                  FIRST EXECUTABLE STATEMENT
-                IER = 0
+       IER = 0
        IF (NDEG .GT. 100 .OR. NDEG .LT. 1) GO TO 165
        ETA = REPSR1
        ARE = ETA
@@ -1882,20 +1882,20 @@ END FUNCTION RAND_PENELOPE
        RLO = REPSP/ETA
 ! C                                  INITIALIZATION OF CONSTANTS FOR
 ! C                                    SHIFT ROTATION
-            XX = .7071068
+       XX = 0.7071067811865475D0  !.7071068
        YY = -XX
-       SINR = .9975641
-       COSR = -.06975647
+       SINR = 0.9975640502598242D0   !.9975641
+       COSR = -0.06975647374412530D0
        N = NDEG
        NN = N+1
 ! C                                  ALGORITHM FAILS IF THE LEADING
 ! C                                    COEFFICIENT IS ZERO.
-     IF (A(1).NE.ZERO) GO TO 5
+      IF (A(1).NE.ZERO) GO TO 5
        IER = 130
        GO TO 9000
 ! C                                  REMOVE THE ZEROS AT THE ORIGIN IF
 ! C                                    ANY
-        5  IF (A(NN).NE.ZERO) GO TO 10
+5     IF (A(NN).NE.ZERO) GO TO 10
        J = NDEG-N+1
        JJ = J+NDEG
        Z(J) = ZERO
@@ -1905,11 +1905,11 @@ END FUNCTION RAND_PENELOPE
        IF (NN.EQ.1) GO TO 9005
        GO TO 5
 ! C                                  MAKE A COPY OF THE COEFFICIENTS
-   10  DO 15 I=1,NN
+10     DO 15 I=1,NN
         P(I) = A(I)
-   15  CONTINUE
+15     CONTINUE
 ! C                                  START THE ALGORITHM FOR ONE ZERO
-   20  IF (N.GT.2) GO TO 30
+20     IF (N.GT.2) GO TO 30
        IF (N.LT.1) GO TO 9005
 ! C                                  CALCULATE THE FINAL ZERO OR PAIR OF
 ! C                                    ZEROS
@@ -1917,17 +1917,17 @@ END FUNCTION RAND_PENELOPE
        Z(NDEG) = -P(2)/P(1)
        Z(NDEG+NDEG) = ZERO
        GO TO 145
-   25  CALL ZRPQLI (P(1),P(2),P(3),Z(NDEG-1),Z(NDEG+NDEG-1),Z(NDEG),Z(NDEG+NDEG))
+25     CALL ZRPQLI (P(1),P(2),P(3),Z(NDEG-1),Z(NDEG+NDEG-1),Z(NDEG),Z(NDEG+NDEG))
        GO TO 145
 ! C                                  FIND LARGEST AND SMALLEST MODULI OF
 ! C                                    COEFFICIENTS.
-   30  RMAX = 0.
+30     RMAX = 0.
        RMIN = RINFP
        DO 35 I=1,NN
-         X = ABS(SNGL(P(I)))
+          X = DABS(DBLE(P(I)))   !SNGL
           IF (X.GT.RMAX) RMAX = X
-          IF (X.NE.0..AND.X.LT.RMIN) RMIN = X
-   35  CONTINUE
+          IF (X.NE.0.D0 .AND. X.LT.RMIN) RMIN = X
+35     CONTINUE
 ! C                                  SCALE IF THERE ARE LARGE OR VERY
 ! C                                    SMALL COEFFICIENTS COMPUTES A
 ! C                                    SCALE FACTOR TO MULTIPLY THE
@@ -1937,13 +1937,13 @@ END FUNCTION RAND_PENELOPE
 ! C                                    UNDERFLOW INTERFERING WITH THE
 ! C                                    CONVERGENCE CRITERION.
 ! C                                  THE FACTOR IS A POWER OF THE BASE
-                SC = RLO/RMIN
-       IF (SC.GT.1.0) GO TO 40
-       IF (RMAX.LT.10.) GO TO 55
+       SC = RLO/RMIN
+       IF (SC.GT.1.0D0) GO TO 40
+       IF (RMAX.LT.10.D0) GO TO 55
        IF (SC.EQ.0.) SC = REPSP*RADIX*RADIX
        GO TO 45
    40  IF (RINFP/SC.LT.RMAX) GO TO 55
-   45  L = DLOG(SC)/DLOG(RADIX)+.5
+   45  L = DLOG(SC)/DLOG(RADIX)+.5D0
        IF (L .EQ. 0) GO TO 55
        FACTOR = DBLE(RADIX)**L
        DO 50 I=1,NN
@@ -1952,18 +1952,18 @@ END FUNCTION RAND_PENELOPE
 ! C                                  COMPUTE LOWER BOUND ON MODULI OF
 ! C                                    ZEROS.
    55  DO 60 I=1,NN
-      PT(I) = ABS(SNGL(P(I)))
+          PT(I) = DABS(DBLE(P(I)))   !SNGL
    60  CONTINUE
        PT(NN) = -PT(NN)
 ! C                                  COMPUTE UPPER ESTIMATE OF BOUND
        X = DEXP((DLOG(-PT(NN))-DLOG(PT(1)))/N)
-       IF (PT(N).EQ.0.) GO TO 65
+       IF (PT(N).EQ.0.D0) GO TO 65
 ! C                                  IF NEWTON STEP AT THE ORIGIN IS
 ! C                                    BETTER, USE IT.
        XM = -PT(NN)/PT(N)
        IF (XM.LT.X) X = XM
 ! C                                  CHOP THE INTERVAL (0,X) UNTIL FF.LE.0
-   65  XM = X*.1
+   65  XM = X*.1D0
        FF = PT(1)
        DO 70 I=2,NN
         FF = FF*XM+PT(I)
@@ -1974,11 +1974,11 @@ END FUNCTION RAND_PENELOPE
    75  DX = X
 ! C                                  DO NEWTON ITERATION UNTIL X
 ! C                                    CONVERGES TO TWO DECIMAL PLACES
-   80  IF (ABS(DX/X).LE..005) GO TO 90
+   80  IF (DABS(DX/X).LE..005D0) GO TO 90
        FF = PT(1)
        DF = FF
        DO 85 I=2,N
-                FF = FF*X+PT(I)
+          FF = FF*X+PT(I)
           DF = DF*X+FF
    85  CONTINUE
        FF = FF*X+PT(NN)
@@ -2009,15 +2009,15 @@ END FUNCTION RAND_PENELOPE
              RK(J) = T*RK(J-1)+P(J)
   100     CONTINUE
           RK(1) = P(1)
-          ZEROK = DABS(RK(N)).LE.DABS(BB)*ETA*10.
-        GO TO 115
+          ZEROK = DABS(RK(N)).LE.DABS(BB)*ETA*10.D0
+          GO TO 115
 ! C                                  USE UNSCALED FORM OF RECURRENCE
   105    DO 110 I=1,NM1
                  J = NN-I
              RK(J) = RK(J-1)
   110    CONTINUE
          RK(1) = ZERO
-        ZEROK = RK(N).EQ.ZERO
+         ZEROK = RK(N).EQ.ZERO
   115  CONTINUE
 ! C                                  SAVE K FOR RESTARTS WITH NEW SHIFTS
        DO 120 I=1,N
@@ -2032,7 +2032,7 @@ END FUNCTION RAND_PENELOPE
 ! C                                    MODULUS BND AND AMPLITUDE ROTATED
 ! C                                    BY 94 DEGREES FROM THE PREVIOUS
 ! C                                    SHIFT
-         XXX = COSR*XX-SINR*YY
+          XXX = COSR*XX-SINR*YY
           YY = SINR*XX+COSR*YY
           XX = XXX
           SR = BND*XX
@@ -2065,41 +2065,41 @@ END FUNCTION RAND_PENELOPE
 ! C                                  IF THE ITERATION IS UNSUCCESSFUL
 ! C                                    ANOTHER QUADRATIC IS CHOSEN AFTER
 ! C                                    RESTORING K
-  130     DO 135 I=1,N
-      RK(I) = TEMP(I)
-  135     CONTINUE
-  140  CONTINUE
+130      DO 135 I=1,N
+            RK(I) = TEMP(I)
+135      CONTINUE
+140    CONTINUE
 ! C                                  RETURN WITH FAILURE IF NO
 ! C                                    CONVERGENCE WITH 20 SHIFTS
-                IER = 131
+       IER = 131
 ! C                                  CONVERT ZEROS (Z) IN COMPLEX FORM
   145  DO 150 I=1,NDEG
-        NPI= NDEG+I
+         NPI= NDEG+I
          P(I) = Z(NPI)
   150  CONTINUE
        N2 = NDEG+NDEG
        J = NDEG
        DO 155 I=1,NDEG
-         Z(N2-1) = Z(J)
-                Z(N2) = P(J)
+          Z(N2-1) = Z(J)
+          Z(N2) = P(J)
           N2 = N2-2
           J = J-1
-  155  CONTINUE
+155    CONTINUE
        IF (IER .EQ. 0) GO TO 9005
 ! C                                  SET UNFOUND ROOTS TO MACHINE INFINITY
        N2 = 2*(NDEG-NN)+3
        DO 160 I=1,N
-                Z(N2) = RINFP
+          Z(N2) = RINFP
           Z(N2+1) = RINFP
           N2 = N2+2
-  160  CONTINUE
+160    CONTINUE
        GO TO 9000
   165  IER = 129
  9000  CONTINUE
         !srio      CALL UERTST (IER,6HZRPOLY)
       print *,"Error from math routine zrpoly. Called with NDEG,A: ",NDEG,A
  9005  RETURN
-        END SUBROUTINE ZRPOLY
+      END SUBROUTINE ZRPOLY
 
 
 ! C   IMSL ROUTINE NAME   - ZRPQLB                                        
@@ -2180,8 +2180,8 @@ END FUNCTION RAND_PENELOPE
           IF (J.EQ.1.OR.ITYPE.EQ.3) GO TO 35
 ! C                                  COMPUTE RELATIVE MEASURES OF         
 ! C                                    CONVERGENCE OF S AND V SEQUENCES   
-          IF (VV.NE.0.) TV = ABS((VV-OVV)/VV)
-          IF (SS.NE.0.) TS = ABS((SS-OSS)/SS)
+          IF (VV.NE.0.) TV = DABS((VV-OVV)/VV)
+          IF (SS.NE.0.) TS = DABS((SS-OSS)/SS)
 ! C                                  IF DECREASING, MULTIPLY TWO MOST     
 ! C                                    RECENT CONVERGENCE MEASURES        
           TVV = 1.
@@ -2326,15 +2326,15 @@ END FUNCTION RAND_PENELOPE
        RMP = DABS(RA-SZR*RB)+DABS(SZI*RB)
 ! C                                  COMPUTE A RIGOROUS BOUND ON THE      
 ! C                                    ROUNDING ERROR IN EVALUTING P      
-       ZM = SQRT(ABS(SNGL(V)))
-       EE = 2.*ABS(SNGL(QP(1)))
+       ZM = DSQRT(DABS(DBLE(V)))    !SNGL
+       EE = 2.*DABS(DBLE(QP(1)))    !SNGL
        T = -SZR*RB
        DO 10 I=2,N
-        EE = EE*ZM+ABS(SNGL(QP(I)))
+        EE = EE*ZM+DABS(DBLE(QP(I)))    !SNGL
    10  CONTINUE
-       EE = EE*ZM+ABS(SNGL(RA)+T)
-       EE = (5.*RMRE+4.*ARE)*EE-(5.*RMRE+2.*ARE)*(ABS(SNGL(RA)+T)+        &
-                ABS(SNGL(RB))*ZM)+2.*ARE*ABS(T)
+       EE = EE*ZM+DABS(DBLE(RA)+T)       !SNGL
+       EE = (5.*RMRE+4.*ARE)*EE-(5.*RMRE+2.*ARE)*(DABS(DBLE(RA)+T)+        &    !SNGL
+                DABS(DBLE(RB))*ZM)+2.*ARE*DABS(T)    !SNGL
 ! C                                  ITERATION HAS CONVERGED SUFFICIENTLY 
 ! C                                    IF THE POLYNOMIAL VALUE IS LESS    
 ! C                                    THAN 20 TIMES THIS BOUND           
@@ -2351,12 +2351,12 @@ END FUNCTION RAND_PENELOPE
 ! C                                    STEPS ARE TAKEN WITH A U,V CLOSE   
 ! C                                    TO THE CLUSTER                     
        IF (RELSTP.LT.ETA) RELSTP = ETA
-       RELSTP = SQRT(RELSTP)
+       RELSTP = DSQRT(RELSTP)
        U = U-U*RELSTP
        V = V+V*RELSTP
        CALL ZRPQLH (NN,U,V,P,QP,RA,RB)
        DO 20 I=1,5
-                CALL ZRPQLE (ITYPE)
+          CALL ZRPQLE (ITYPE)
           CALL ZRPQLF (ITYPE)
    20  CONTINUE
        TRIED = .TRUE.
@@ -3259,9 +3259,9 @@ SUBROUTINE IBCDCU (TAU,GTAU,N,M,W,VS,IC1,IC2,IER)
 !C                                  SPECIFICATIONS FOR ARGUMENTS         
       integer(kind=ski) :: N,M,IC1,IC2,IER                                
       real(kind=skr),dimension(N)      :: TAU
-      real(kind=skr),dimension(IC1,1)  :: GTAU
+      real(kind=skr),dimension(IC1,M)  :: GTAU      !dimension(IC1,1)
       real(kind=skr),dimension(N,2)    :: W
-      real(kind=skr),dimension(IC2,2,2):: VS
+      real(kind=skr),dimension(IC2,2,N):: VS        !dimension(IC2,2,2)
 !C                                  SPECIFICATIONS FOR LOCAL VARIABLES   
       integer(kind=ski) :: I,JJ,JM1,JP1,J,K,LIM,LL,LP1,NM1
       real(kind=skr) :: AA,BB,C1,C2,CC,DD,DTAU,G,H,RATIO,U,XILIM       
